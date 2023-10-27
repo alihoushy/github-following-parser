@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 from github import Github, Auth
 from tabulate import tabulate
+import concurrent.futures
 
 # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -25,8 +26,6 @@ def fetch_and_calculate_languages_for_repos(user):
      Args:
           user (github.NamedUser.NamedUser): The GitHub user for which to analyze repositories.
      """
-
-     print(f'user: {user.name}')
 
      # Dictionary to store language counts and their percentages
      languages = {}
@@ -73,6 +72,7 @@ def fetch_and_calculate_languages_for_repos(user):
      table_headers = ['Language', 'Percentage']
 
      # Print the table
+     print(f'user: {user.name}')
      print(tabulate(table_data, headers=table_headers, tablefmt="grid"))
 
      # Print the accumulated total percentage of languages used across all repositories
@@ -86,8 +86,11 @@ fetch_and_calculate_languages_for_repos(user=user)
 
 # Get the user's following
 user_following = user.get_following()
-for following in user_following:
-     fetch_and_calculate_languages_for_repos(user=following)
+with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+     # Process followers in parallel
+     future_to_user = {executor.submit(fetch_and_calculate_languages_for_repos, following): following for following in user_following}
+     for future in concurrent.futures.as_completed(future_to_user):
+          following = future_to_user[future]
 
 # # # # # # # # # # # # # # # # # # # # # # # # #
 
